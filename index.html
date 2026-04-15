@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Margazhi – Chennai Event Planner</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0ebe4;max-width:430px;margin:0 auto;min-height:100vh;overflow-x:hidden;}
+    .app{position:relative;min-height:100vh;background:#f0ebe4;}
+    .screen{padding-bottom:80px;min-height:100vh;}
+    .gradient-maroon{background:linear-gradient(135deg,#7B1818 0%,#4A0E0E 100%);}
+    .onboard-bg{min-height:100vh;background:linear-gradient(160deg,#7B1818 0%,#4A0E0E 50%,#2A0808 100%);}
+    .event-card{background:white;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);cursor:pointer;transition:transform 0.15s;}
+    .event-card:active{transform:scale(0.98);}
+    .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:1px solid #e5e5e5;padding:8px 0 16px;z-index:100;}
+    .chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;transition:all 0.15s;white-space:nowrap;border:1.5px solid transparent;}
+    .chip.on{background:#7B1818;color:white;border-color:#7B1818;}
+    .chip.off{background:white;color:#555;border-color:#ddd;}
+    .scroll-x{overflow-x:auto;display:flex;gap:8px;padding-bottom:4px;scrollbar-width:none;}
+    .scroll-x::-webkit-scrollbar{display:none;}
+    .modal-overlay{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:100vh;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:flex-end;}
+    .modal-sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:20px;}
+    .input{width:100%;padding:12px 16px;border:1.5px solid #e0e0e0;border-radius:12px;font-size:15px;outline:none;transition:border-color 0.15s;}
+    .input:focus{border-color:#7B1818;}
+    .btn-primary{width:100%;padding:14px;background:#7B1818;color:white;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;}
+    .btn-primary:active{opacity:0.85;}
+    .btn-secondary{width:100%;padding:14px;background:transparent;color:#7B1818;border:2px solid #7B1818;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;}
+    .btn-gold{width:100%;padding:14px;background:#C9A227;color:white;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;}
+    .interest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .icard{background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.2);border-radius:14px;padding:16px 8px;text-align:center;cursor:pointer;transition:all 0.15s;}
+    .icard.sel{background:rgba(201,162,39,0.3);border-color:#C9A227;}
+    .zone-chip{padding:10px 18px;border-radius:20px;font-size:14px;cursor:pointer;border:1.5px solid rgba(255,255,255,0.3);color:white;background:rgba(255,255,255,0.1);}
+    .zone-chip.sel{background:#C9A227;border-color:#C9A227;}
+    .progress-bar{height:4px;border-radius:2px;background:#e5e5e5;overflow:hidden;}
+    .progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#C9A227,#F0C040);}
+    .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:white;padding:12px 20px;border-radius:10px;font-size:14px;z-index:1000;white-space:nowrap;}
+    .success-circle{width:80px;height:80px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;margin:0 auto;animation:pop 0.5s ease;}
+    @keyframes pop{0%{transform:scale(0);}70%{transform:scale(1.15);}100%{transform:scale(1);}}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useContext,createContext} = React;
+
+// ── TRANSLATIONS ──────────────────────────────────────────────
+const T = {
+  en:{appName:"Margazhi",home:"Home",bookings:"Bookings",notifications:"Alerts",profile:"Profile",
+      search:"Search events, artists…",filter:"Filter",bookNow:"Book Now",soloBook:"Book for Myself",
+      groupBook:"Book for Group",proceedPay:"Proceed to Payment",confirmed:"Booking Confirmed!",
+      shareDetails:"Share via WhatsApp",viewBookings:"View My Bookings",myBookings:"My Bookings",
+      upcoming:"Upcoming",past:"Past",noEvents:"No events match your filters",allZones:"All Chennai",
+      today:"Today",tomorrow:"Tomorrow",weekend:"Weekend",allDates:"Any Date",foodAt:"Food at this Venue",
+      addMembers:"Add Group Members",language:"Language",zone:"My Zone",interests:"Interests",
+      notifsPref:"Push Notifications"},
+  ta:{appName:"மார்கழி",home:"முகப்பு",bookings:"பதிவுகள்",notifications:"அறிவிப்புகள்",profile:"சுயவிவரம்",
+      search:"நிகழ்வுகள் தேடுங்கள்…",filter:"வடிகட்டி",bookNow:"இப்போது பதிவு செய்யுங்கள்",
+      soloBook:"என்னுடைய பதிவு",groupBook:"குழு பதிவு",proceedPay:"கட்டணம் செலுத்துங்கள்",
+      confirmed:"பதிவு உறுதிப்படுத்தப்பட்டது!",shareDetails:"WhatsApp-ல் பகிரவும்",
+      viewBookings:"என் பதிவுகள் பார்க்க",myBookings:"என் பதிவுகள்",upcoming:"வரவிருக்கும்",past:"கடந்த",
+      noEvents:"உங்கள் வடிகட்டிகளுக்கு நிகழ்வுகள் இல்லை",allZones:"அனைத்து சென்னை",
+      today:"இன்று",tomorrow:"நாளை",weekend:"வார இறுதி",allDates:"எந்த தேதியும்",
+      foodAt:"இந்த இடத்தில் உணவு",addMembers:"குழு உறுப்பினர்களைச் சேர்க்கவும்",language:"மொழி",
+      zone:"என் பகுதி",interests:"ஆர்வங்கள்",notifsPref:"அறிவிப்புகள்"}
+};
+
+// ── DATA ──────────────────────────────────────────────────────
+const ZONES = ["Mylapore","T.Nagar","Adyar","Anna Nagar","Velachery","Nungambakkam","Egmore","Triplicane","Besant Nagar","Perambur"];
+
+const INTERESTS = [
+  {id:"music",   label:"Music",    ta:"இசை",         emoji:"🎵"},
+  {id:"dance",   label:"Dance",    ta:"நடனம்",       emoji:"💃"},
+  {id:"workshop",label:"Workshop", ta:"பயிற்சி",     emoji:"🎓"},
+  {id:"sports",  label:"Sports",   ta:"விளையாட்டு",  emoji:"⚽"},
+  {id:"drama",   label:"Drama",    ta:"நாடகம்",      emoji:"🎭"},
+  {id:"art",     label:"Art",      ta:"கலை",         emoji:"🎨"},
+  {id:"food",    label:"Food Fest",ta:"உணவு திருவிழா",emoji:"🍱"},
+  {id:"yoga",    label:"Yoga",     ta:"யோகா",        emoji:"🧘"},
+  {id:"film",    label:"Film",     ta:"திரைப்படம்",  emoji:"🎬"},
+];
+
+const CANTEENS = {
+  "Music Academy":[
+    {name:"Woodlands",cuisine:"South Indian",dietary:["veg"],note:"Famous filter coffee & dosas"},
+    {name:"Saravana Bhavan",cuisine:"South Indian",dietary:["veg","jain"],note:"Full meals & tiffin"},
+    {name:"Street Bites",cuisine:"Chaat & Snacks",dietary:["veg"],note:"Bhel puri, chaats"},
+  ],
+  "Narada Gana Sabha":[
+    {name:"A2B Canteen",cuisine:"South Indian",dietary:["veg"],note:"Idli, vada, sambar"},
+    {name:"Anjappar Corner",cuisine:"Chettinad",dietary:["nonveg"],note:"Biryani & Chettinad specials"},
+  ],
+  "Kalakshetra":[
+    {name:"Kalakshetra Cafeteria",cuisine:"Traditional Tamil Nadu",dietary:["veg"],note:"Heritage recipes"},
+    {name:"Organic Greens",cuisine:"Health Café",dietary:["veg","vegan","jain"],note:"Salads, juices, wraps"},
+  ],
+  "Nungambakkam Cultural Center":[
+    {name:"Murugan Idli Shop",cuisine:"South Indian",dietary:["veg"],note:"Mini idlis & podi"},
+    {name:"The Spice Route",cuisine:"Multi-cuisine",dietary:["veg","nonveg"],note:"Continental & Indian fusion"},
+  ],
+  "TAG Performing Arts":[
+    {name:"Cane & Grain",cuisine:"Café",dietary:["veg","vegan"],note:"Sandwiches, coffee, desserts"},
+    {name:"Kaaraikudi Kitchen",cuisine:"Chettinad",dietary:["nonveg"],note:"Authentic Chettinad curries"},
+  ],
+  "Vivekananda House":[
+    {name:"Triplicane Mess",cuisine:"South Indian",dietary:["veg"],note:"Thali meals & dosas"},
+    {name:"Muslim Hotel Corner",cuisine:"Tamil Muslim",dietary:["nonveg"],note:"Biryani & Haleem"},
+  ],
+};
+
+const today = new Date();
+const fmt = d => d.toISOString().split('T')[0];
+const addDays = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+
+const EVENTS = [
+  {id:1,title:"Carnatic Vocal Recital",titleTa:"கர்நாடக குரல் இசை",artist:"Bombay Jayashri",
+   venue:"Music Academy",zone:"Mylapore",date:fmt(addDays(today,3)),time:"6:30 PM",duration:"2.5 hrs",
+   price:500,category:"music",tags:["classical","carnatic","vocal"],available:87,total:200,
+   grad:"linear-gradient(135deg,#4A0E0E,#8B2020)",emoji:"🎵",
+   desc:"An evening of sublime Carnatic vocal music by the legendary Bombay Jayashri. Experience ragas perfected over centuries in an intimate acoustic setting."},
+  {id:2,title:"Bharatanatyam Arangetram",titleTa:"பரதநாட்டியம் அரங்கேற்றம்",artist:"Nithyashree Mahadevan (Disciple)",
+   venue:"Narada Gana Sabha",zone:"T.Nagar",date:fmt(addDays(today,1)),time:"5:00 PM",duration:"3 hrs",
+   price:300,category:"dance",tags:["bharatanatyam","classical","arangetram"],available:42,total:150,
+   grad:"linear-gradient(135deg,#0E3A4A,#205C8B)",emoji:"💃",
+   desc:"A momentous debut recital showcasing years of dedicated training. Witness grace, expression, and technical mastery of Bharatanatyam."},
+  {id:3,title:"Veena Instrumental Concert",titleTa:"வீணை கருவி இசை",artist:"E. Gayathri",
+   venue:"Kalakshetra",zone:"Adyar",date:fmt(today),time:"7:00 PM",duration:"2 hrs",
+   price:0,category:"music",tags:["veena","instrumental","classical"],available:200,total:300,
+   grad:"linear-gradient(135deg,#2D4A0E,#4A8B20)",emoji:"🎸",
+   desc:"Free entry. A meditative journey through classical ragas on the Saraswati Veena, performed in the serene Kalakshetra grounds."},
+  {id:4,title:"Carnatic Music Workshop",titleTa:"கர்நாடக இசை பயிற்சி",artist:"T.M. Krishna",
+   venue:"Nungambakkam Cultural Center",zone:"Nungambakkam",date:fmt(addDays(today,2)),time:"10:00 AM",duration:"3 hrs",
+   price:1200,category:"workshop",tags:["workshop","carnatic","learning"],available:18,total:40,
+   grad:"linear-gradient(135deg,#4A3A0E,#8B7020)",emoji:"🎓",
+   desc:"Intensive workshop on Carnatic music theory, raga identification, and appreciation. Open to beginners and intermediate learners."},
+  {id:5,title:"Kuchipudi Dance Drama",titleTa:"குச்சிபுடி நடன நாடகம்",artist:"Vempati Ravi Shankar Troupe",
+   venue:"TAG Performing Arts",zone:"Anna Nagar",date:fmt(addDays(today,5)),time:"6:00 PM",duration:"2.5 hrs",
+   price:400,category:"dance",tags:["kuchipudi","dance drama","classical"],available:95,total:180,
+   grad:"linear-gradient(135deg,#3A0E4A,#6B208B)",emoji:"🎭",
+   desc:"Spectacular Kuchipudi performance depicting scenes from Bhagavatam. Stunning costumes, live orchestra, and expressive storytelling."},
+  {id:6,title:"Mridangam Masterclass",titleTa:"மிருதங்கம் மாஸ்டர்கிளாஸ்",artist:"Karaikudi Mani",
+   venue:"Music Academy",zone:"Mylapore",date:fmt(addDays(today,4)),time:"9:00 AM",duration:"4 hrs",
+   price:2000,category:"workshop",tags:["mridangam","percussion","workshop"],available:8,total:25,
+   grad:"linear-gradient(135deg,#4A1A0E,#8B3020)",emoji:"🥁",
+   desc:"Learn rhythm patterns and talas directly from the legendary percussionist. Limited seats — serious practitioners only."},
+  {id:7,title:"Tamil Folk Music Night",titleTa:"தமிழ் நாட்டுப்புற இசை இரவு",artist:"Various Artists",
+   venue:"Vivekananda House",zone:"Triplicane",date:fmt(addDays(today,6)),time:"7:30 PM",duration:"3 hrs",
+   price:150,category:"music",tags:["folk","traditional","tamil"],available:120,total:250,
+   grad:"linear-gradient(135deg,#0E4A3A,#208B6B)",emoji:"🎶",
+   desc:"Celebration of Tamil Nadu's rich folk music tradition. Villu paattu, Oyilattam, Kummi, and more authentic performances."},
+  {id:8,title:"Violin Trio Evening",titleTa:"மூவர் வயலின் மாலை",artist:"L. Subramaniam & Family",
+   venue:"Narada Gana Sabha",zone:"T.Nagar",date:fmt(addDays(today,7)),time:"6:30 PM",duration:"2 hrs",
+   price:800,category:"music",tags:["violin","classical","fusion"],available:30,total:200,
+   grad:"linear-gradient(135deg,#0E1A4A,#20388B)",emoji:"🎻",
+   desc:"Extraordinary evening blending classical Carnatic with Western violin. Three virtuosos, one unforgettable night."},
+  {id:9,title:"Traditional Yoga at Dawn",titleTa:"விடியல் பாரம்பரிய யோகா",artist:"Krishnamacharya Yoga Foundation",
+   venue:"Kalakshetra",zone:"Adyar",date:fmt(addDays(today,1)),time:"5:30 AM",duration:"1.5 hrs",
+   price:200,category:"yoga",tags:["yoga","wellness","morning"],available:35,total:50,
+   grad:"linear-gradient(135deg,#1A4A0E,#388B20)",emoji:"🧘",
+   desc:"Sunrise yoga session in serene Kalakshetra grounds. Traditional Viniyoga style with classical chanting."},
+  {id:10,title:"Chennai Heritage Walk & Concert",titleTa:"சென்னை பாரம்பரிய நடை & இசை",artist:"Mytholore & Friends",
+   venue:"Nungambakkam Cultural Center",zone:"Nungambakkam",date:fmt(addDays(today,8)),time:"4:00 PM",duration:"4 hrs",
+   price:650,category:"art",tags:["heritage","cultural","walk"],available:50,total:75,
+   grad:"linear-gradient(135deg,#4A4A0E,#8B8B20)",emoji:"🏛️",
+   desc:"Guided walk through Chennai's historic neighborhoods, culminating in a cultural concert. Discover hidden gems of the city."},
+];
+
+// ── CONTEXT ───────────────────────────────────────────────────
+const Ctx = createContext();
+function AppProvider({children}){
+  const [lang,setLang] = useState('en');
+  const [onboarded,setOnboarded] = useState(false);
+  const [prefs,setPrefs] = useState({interests:[],zone:'',notifs:true});
+  const [bookings,setBookings] = useState([]);
+  const [toast,setToast] = useState(null);
+
+  const t = k => T[lang][k] || k;
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null),2500); };
+  const addBooking = b => setBookings(p=>[b,...p]);
+
+  return (
+    <Ctx.Provider value={{lang,setLang,t,onboarded,setOnboarded,prefs,setPrefs,bookings,addBooking,showToast}}>
+      {children}
+      {toast && <div className="toast">{toast}</div>}
+    </Ctx.Provider>
+  );
+}
+
+// ── ICONS ─────────────────────────────────────────────────────
+const Ico = {
+  Home:()=><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>,
+  Ticket:()=><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 12c0-1.1.9-2 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v4c1.1 0 2 .9 2 2s-.9 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2zm-5-1.46l-3 1.75-3-1.75v-3.07L12 9.22l3-1.75v3.07z"/></svg>,
+  Bell:()=><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>,
+  Person:()=><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>,
+  Search:()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  Filter:()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>,
+  Back:()=><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>,
+  Check:()=><svg width="36" height="36" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>,
+  Share:()=><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>,
+  Plus:()=><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>,
+  Minus:()=><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>,
+  Location:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>,
+  Clock:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>,
+  Food:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05zM1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1zm15.03-7c0-8-15.03-8-15.03 0h15.03zM1.02 17h15v2h-15z"/></svg>,
+  Group:()=><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>,
+};
+
+// ── ONBOARDING ────────────────────────────────────────────────
+function Onboarding(){
+  const {t,lang,setLang,setOnboarded,setPrefs,showToast} = useContext(Ctx);
+  const [step,setStep] = useState(0);
+  const [interests,setInterests] = useState([]);
+  const [zone,setZone] = useState('');
+  const [notifs,setNotifs] = useState(true);
+
+  const toggleI = id => setInterests(p=>p.includes(id)?p.filter(i=>i!==id):[...p,id]);
+
+  const finish = () => {
+    setPrefs({interests,zone,notifs});
+    setOnboarded(true);
+    showToast("Welcome to Margazhi! 🎵");
+  };
+
+  const screens = [
+    // Welcome
+    <div key="w" style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'100vh',padding:'0 32px',textAlign:'center'}}>
+      <div style={{fontSize:80,marginBottom:16}}>🎵</div>
+      <div style={{color:'#C9A227',fontSize:38,fontWeight:900,letterSpacing:1}}>மார்கழி</div>
+      <div style={{color:'#C9A227',fontSize:18,fontWeight:600,marginBottom:10}}>MARGAZHI</div>
+      <div style={{color:'rgba(255,255,255,0.75)',fontSize:15,lineHeight:1.6,marginBottom:48}}>
+        Chennai's premier platform for discovering classical music, dance, workshops & cultural events
+      </div>
+      <button className="btn-gold" style={{borderRadius:30,padding:'16px 56px',width:'auto',fontSize:18}} onClick={()=>setStep(1)}>
+        Get Started →
+      </button>
+      <div style={{color:'rgba(255,255,255,0.4)',fontSize:12,marginTop:16}}>10,000+ events · Dec–Jan Margazhi Season</div>
+    </div>,
+
+    // Interests
+    <div key="i" style={{padding:'48px 20px 24px',minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+      <div style={{color:'rgba(255,255,255,0.5)',fontSize:12,marginBottom:6}}>Step 1 of 4</div>
+      <div style={{color:'white',fontSize:22,fontWeight:700,marginBottom:4}}>What do you love?</div>
+      <div style={{color:'rgba(255,255,255,0.65)',fontSize:13,marginBottom:20}}>Select your interests for personalized events</div>
+      <div className="interest-grid" style={{flex:1}}>
+        {INTERESTS.map(i=>(
+          <div key={i.id} className={`icard ${interests.includes(i.id)?'sel':''}`} onClick={()=>toggleI(i.id)}>
+            <div style={{fontSize:28}}>{i.emoji}</div>
+            <div style={{color:'white',fontSize:11,marginTop:6}}>{lang==='ta'?i.ta:i.label}</div>
+            {interests.includes(i.id)&&<div style={{color:'#C9A227',marginTop:2,fontSize:13}}>✓</div>}
+          </div>
+        ))}
+      </div>
+      <button className="btn-gold" style={{marginTop:20}} onClick={()=>interests.length?setStep(2):showToast("Pick at least one interest")}>Continue →</button>
+    </div>,
+
+    // Zone
+    <div key="z" style={{padding:'48px 20px 24px',minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+      <div style={{color:'rgba(255,255,255,0.5)',fontSize:12,marginBottom:6}}>Step 2 of 4</div>
+      <div style={{color:'white',fontSize:22,fontWeight:700,marginBottom:4}}>Your Neighborhood?</div>
+      <div style={{color:'rgba(255,255,255,0.65)',fontSize:13,marginBottom:20}}>We'll surface events near you first</div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:10,flex:1}}>
+        {ZONES.map(z=>(
+          <div key={z} className={`zone-chip ${zone===z?'sel':''}`} onClick={()=>setZone(z)}>
+            📍 {z}
+          </div>
+        ))}
+      </div>
+      <button className="btn-gold" style={{marginTop:20}} onClick={()=>zone?setStep(3):showToast("Please select your zone")}>Continue →</button>
+    </div>,
+
+    // Language
+    <div key="l" style={{padding:'48px 20px 24px',minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+      <div style={{color:'rgba(255,255,255,0.5)',fontSize:12,marginBottom:6}}>Step 3 of 4</div>
+      <div style={{color:'white',fontSize:22,fontWeight:700,marginBottom:4}}>Choose Language</div>
+      <div style={{color:'rgba(255,255,255,0.65)',fontSize:13,marginBottom:24}}>மொழியை தேர்வு செய்யுங்கள்</div>
+      <div style={{display:'flex',flexDirection:'column',gap:14,flex:1}}>
+        {[['en','🇬🇧','English','Discover events in English'],['ta','🇮🇳','தமிழ்','நிகழ்வுகளை தமிழில் கண்டறியுங்கள்']].map(([code,flag,name,sub])=>(
+          <div key={code} onClick={()=>setLang(code)} style={{
+            background:lang===code?'rgba(201,162,39,0.25)':'rgba(255,255,255,0.08)',
+            border:`2px solid ${lang===code?'#C9A227':'rgba(255,255,255,0.2)'}`,
+            borderRadius:16,padding:'18px 20px',cursor:'pointer',display:'flex',alignItems:'center',gap:16
+          }}>
+            <span style={{fontSize:36}}>{flag}</span>
+            <div style={{flex:1}}>
+              <div style={{color:'white',fontSize:17,fontWeight:600}}>{name}</div>
+              <div style={{color:'rgba(255,255,255,0.55)',fontSize:12,marginTop:2}}>{sub}</div>
+            </div>
+            {lang===code&&<span style={{color:'#C9A227',fontSize:22}}>✓</span>}
+          </div>
+        ))}
+      </div>
+      <button className="btn-gold" style={{marginTop:24}} onClick={()=>setStep(4)}>Continue →</button>
+    </div>,
+
+    // Notifications
+    <div key="n" style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'100vh',padding:'0 28px',textAlign:'center'}}>
+      <div style={{fontSize:70,marginBottom:16}}>🔔</div>
+      <div style={{color:'rgba(255,255,255,0.5)',fontSize:12,marginBottom:8}}>Step 4 of 4</div>
+      <div style={{color:'white',fontSize:22,fontWeight:700,marginBottom:12}}>
+        {lang==='ta'?'அறிவிப்புகளை இயக்கவும்':'Stay in the Loop'}
+      </div>
+      <div style={{color:'rgba(255,255,255,0.7)',fontSize:14,lineHeight:1.7,marginBottom:40}}>
+        {lang==='ta'
+          ?'உங்கள் விருப்பங்களுக்கு ஏற்ப புதிய நிகழ்வுகள் பற்றி அறிவிப்புகள் பெறுங்கள்'
+          :'Get notified about events matching your interests before tickets sell out'}
+      </div>
+      <button className="btn-gold" style={{borderRadius:30,padding:'16px 40px',width:'auto',marginBottom:14}} onClick={()=>{setNotifs(true);finish();}}>
+        🔔 Yes, Notify Me
+      </button>
+      <button onClick={()=>{setNotifs(false);finish();}} style={{color:'rgba(255,255,255,0.45)',background:'none',border:'none',cursor:'pointer',fontSize:14}}>
+        Not now
+      </button>
+    </div>,
+  ];
+
+  return <div className="onboard-bg app">{screens[step]}</div>;
+}
+
+// ── EVENT CARD ────────────────────────────────────────────────
+function EventCard({event,onClick}){
+  const {lang} = useContext(Ctx);
+  const title = lang==='ta'?event.titleTa:event.title;
+  const pct = Math.round((1-event.available/event.total)*100);
+  const isToday = event.date===fmt(today);
+  const isFree = event.price===0;
+  const lowAvail = event.available<20 && event.available>0;
+
+  return (
+    <div className="event-card" onClick={onClick}>
+      <div style={{background:event.grad,height:110,position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <span style={{fontSize:48}}>{event.emoji}</span>
+        {isToday&&<div style={{position:'absolute',top:10,left:10,background:'#22C55E',color:'white',padding:'3px 10px',borderRadius:12,fontSize:10,fontWeight:700}}>TODAY</div>}
+        {lowAvail&&<div style={{position:'absolute',top:10,right:10,background:'#EF4444',color:'white',padding:'3px 9px',borderRadius:12,fontSize:10,fontWeight:700}}>⚡ {event.available} left</div>}
+        <div style={{position:'absolute',bottom:8,right:10,background:isFree?'#22C55E':'rgba(0,0,0,0.65)',color:'white',padding:'3px 10px',borderRadius:12,fontSize:13,fontWeight:700}}>
+          {isFree?'FREE':`₹${event.price}`}
+        </div>
+      </div>
+      <div style={{padding:'12px 14px'}}>
+        <div style={{fontSize:14,fontWeight:700,color:'#1a1a1a',marginBottom:3,lineHeight:1.3}}>{title}</div>
+        <div style={{fontSize:12,color:'#777',marginBottom:8}}>{event.artist}</div>
+        <div style={{display:'flex',gap:10,fontSize:11,color:'#999',marginBottom:8}}>
+          <span style={{display:'flex',alignItems:'center',gap:2}}><Ico.Clock />{new Date(event.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>
+          <span style={{display:'flex',alignItems:'center',gap:2}}><Ico.Clock />{event.time}</span>
+          <span style={{display:'flex',alignItems:'center',gap:2}}><Ico.Location />{event.zone}</span>
+        </div>
+        <div style={{display:'flex',gap:6}}>
+          {event.tags.slice(0,2).map(tag=>(
+            <span key={tag} style={{background:'#F5F0EB',color:'#7B1818',padding:'2px 8px',borderRadius:8,fontSize:11,fontWeight:600}}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── FILTER MODAL ──────────────────────────────────────────────
+function FilterModal({filters,onChange,onClose}){
+  const {t,lang} = useContext(Ctx);
+  const [f,setF] = useState({...filters});
+
+  const dateOpts=[
+    {v:'',l:t('allDates')},{v:fmt(today),l:t('today')},
+    {v:fmt(addDays(today,1)),l:t('tomorrow')},{v:'weekend',l:t('weekend')},
+  ];
+  const foodOpts=[
+    {id:'',l:'🍽 All'},{id:'veg',l:'🟢 Veg'},{id:'nonveg',l:'🔴 Non-Veg'},
+    {id:'vegan',l:'🌱 Vegan'},{id:'jain',l:'🟡 Jain'},
+  ];
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
+          <div style={{fontSize:17,fontWeight:700}}>Filters</div>
+          <button onClick={()=>setF({interest:'',date:'',zone:'',food:'',group:1})} style={{color:'#7B1818',background:'none',border:'none',cursor:'pointer',fontSize:13,fontWeight:600}}>Reset all</button>
+        </div>
+
+        {/* Category */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:600,color:'#555',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5}}>Category</div>
+          <div className="scroll-x">
+            {[{id:'',emoji:'✨',label:'All'},...INTERESTS.map(i=>({...i,label:lang==='ta'?i.ta:i.label}))].map(i=>(
+              <div key={i.id} className={`chip ${f.interest===i.id?'on':'off'}`} onClick={()=>setF(p=>({...p,interest:i.id}))}>
+                {i.emoji} {i.label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Date */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:600,color:'#555',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5}}>Date</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {dateOpts.map(d=>(
+              <div key={d.v} className={`chip ${f.date===d.v?'on':'off'}`} onClick={()=>setF(p=>({...p,date:d.v}))}>{d.l}</div>
+            ))}
+          </div>
+        </div>
+
+        {/* Zone */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:600,color:'#555',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5}}>Zone</div>
+          <div className="scroll-x">
+            {[{v:'',l:'All Zones'},...ZONES.map(z=>({v:z,l:z}))].map(z=>(
+              <div key={z.v} className={`chip ${f.zone===z.v?'on':'off'}`} onClick={()=>setF(p=>({...p,zone:z.v}))}>
+                {z.v?'📍 ':''}{z.l}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Food */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:600,color:'#555',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5}}>Food Preference</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {foodOpts.map(fo=>(
+              <div key={fo.id} className={`chip ${f.food===fo.id?'on':'off'}`} onClick={()=>setF(p=>({...p,food:fo.id}))}>{fo.l}</div>
+            ))}
+          </div>
+        </div>
+
+        {/* Group size */}
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:12,fontWeight:600,color:'#555',marginBottom:8,textTransform:'uppercase',letterSpacing:0.5}}>
+            Min. Group Size: <span style={{color:'#7B1818'}}>{f.group}</span>
+          </div>
+          <input type="range" min="1" max="10" value={f.group}
+            onChange={e=>setF(p=>({...p,group:+e.target.value}))}
+            style={{width:'100%',accentColor:'#7B1818'}}/>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#aaa',marginTop:4}}>
+            <span>1 (solo)</span><span>5</span><span>10+</span>
+          </div>
+        </div>
+
+        <button className="btn-primary" onClick={()=>{onChange(f);onClose();}}>Apply Filters</button>
+      </div>
+    </div>
+  );
+}
+
+// ── HOME SCREEN ───────────────────────────────────────────────
+function HomeScreen({onEventClick}){
+  const {t,lang,prefs} = useContext(Ctx);
+  const [search,setSearch] = useState('');
+  const [showFilter,setShowFilter] = useState(false);
+  const [filters,setFilters] = useState({interest:'',date:'',zone:prefs.zone||'',food:'',group:1});
+  const [quick,setQuick] = useState('all');
+
+  // Weekend dates
+  const dow = today.getDay();
+  const dToSat = dow===6?0:(6-dow);
+  const dToSun = dow===0?0:(7-dow);
+  const weekendDates = [fmt(addDays(today,dToSat||7)),fmt(addDays(today,dToSun||7))];
+
+  const filtered = EVENTS.filter(e=>{
+    const q = search.toLowerCase();
+    if(q && !e.title.toLowerCase().includes(q) && !e.titleTa.includes(search) && !e.artist.toLowerCase().includes(q)) return false;
+    if(filters.interest && e.category!==filters.interest) return false;
+    if(filters.date==='weekend' && !weekendDates.includes(e.date)) return false;
+    else if(filters.date && filters.date!=='weekend' && e.date!==filters.date) return false;
+    if(filters.zone && e.zone!==filters.zone) return false;
+    if(filters.food){
+      const cs=CANTEENS[e.venue]||[];
+      if(!cs.some(c=>c.dietary.includes(filters.food))) return false;
+    }
+    if(quick==='today' && e.date!==fmt(today)) return false;
+    if(quick==='free' && e.price!==0) return false;
+    if(quick==='music' && e.category!=='music') return false;
+    if(quick==='dance' && e.category!=='dance') return false;
+    if(e.available<filters.group) return false;
+    return true;
+  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  const activeCount = [filters.interest,filters.date,filters.food,filters.zone].filter(Boolean).length+(filters.group>1?1:0);
+  const quickOpts = [
+    {id:'all',l:lang==='ta'?'அனைத்தும்':'All'},
+    {id:'today',l:lang==='ta'?'இன்று':'Today'},
+    {id:'free',l:lang==='ta'?'இலவசம்':'Free'},
+    {id:'music',l:lang==='ta'?'இசை':'Music'},
+    {id:'dance',l:lang==='ta'?'நடனம்':'Dance'},
+  ];
+
+  return (
+    <div className="screen">
+      {/* Header */}
+      <div className="gradient-maroon" style={{padding:'48px 18px 18px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <div>
+            <div style={{color:'#C9A227',fontSize:24,fontWeight:900,letterSpacing:0.5}}>{t('appName')}</div>
+            <div style={{color:'rgba(255,255,255,0.65)',fontSize:11}}>
+              {lang==='ta'?'சென்னை நிகழ்வுகள்':'Chennai Events'}
+            </div>
+          </div>
+          <div style={{background:'rgba(255,255,255,0.15)',borderRadius:12,padding:'6px 12px',color:'white',fontSize:12,cursor:'pointer'}}
+            onClick={()=>setShowFilter(true)}>
+            📍 {filters.zone||(lang==='ta'?'அனைத்தும்':'All Chennai')}
+          </div>
+        </div>
+        <div style={{position:'relative'}}>
+          <div style={{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',color:'#bbb'}}><Ico.Search /></div>
+          <input className="input" style={{paddingLeft:42,background:'rgba(255,255,255,0.95)'}}
+            placeholder={t('search')} value={search} onChange={e=>setSearch(e.target.value)}/>
+        </div>
+      </div>
+
+      {/* Quick filters */}
+      <div style={{background:'white',padding:'10px 16px',borderBottom:'1px solid #f0f0f0',display:'flex',gap:8,alignItems:'center'}}>
+        <div className="scroll-x" style={{flex:1}}>
+          {quickOpts.map(q=>(
+            <div key={q.id} className={`chip ${quick===q.id?'on':'off'}`} onClick={()=>setQuick(q.id)}>{q.l}</div>
+          ))}
+        </div>
+        <button onClick={()=>setShowFilter(true)} style={{
+          display:'flex',alignItems:'center',gap:5,padding:'7px 13px',borderRadius:20,border:'none',cursor:'pointer',
+          background:activeCount>0?'#7B1818':'#f5f5f5',color:activeCount>0?'white':'#555',
+          fontSize:12,fontWeight:600,flexShrink:0
+        }}>
+          <Ico.Filter /> {t('filter')}{activeCount>0?` (${activeCount})`:''}
+        </button>
+      </div>
+
+      {/* Events */}
+      <div style={{padding:'14px 16px'}}>
+        {filtered.length===0?(
+          <div style={{textAlign:'center',padding:'60px 20px',color:'#888'}}>
+            <div style={{fontSize:48,marginBottom:12}}>🎭</div>
+            <div style={{fontSize:15,fontWeight:600,marginBottom:8}}>{t('noEvents')}</div>
+            <button onClick={()=>{setFilters({interest:'',date:'',zone:'',food:'',group:1});setQuick('all');setSearch('');}}
+              style={{color:'#7B1818',background:'none',border:'none',cursor:'pointer',fontWeight:600,fontSize:14}}>
+              Clear Filters
+            </button>
+          </div>
+        ):(
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{fontSize:12,color:'#999',marginBottom:2}}>
+              {filtered.length} {lang==='ta'?'நிகழ்வுகள்':'events found'}
+            </div>
+            {filtered.map(ev=><EventCard key={ev.id} event={ev} onClick={()=>onEventClick(ev)}/>)}
+          </div>
+        )}
+      </div>
+
+      {showFilter&&<FilterModal filters={filters} onChange={setFilters} onClose={()=>setShowFilter(false)}/>}
+    </div>
+  );
+}
+
+// ── EVENT DETAIL ──────────────────────────────────────────────
+function EventDetail({event,onBack,onBook}){
+  const {t,lang} = useContext(Ctx);
+  const title = lang==='ta'?event.titleTa:event.title;
+  const canteens = CANTEENS[event.venue]||[];
+  const pct = Math.round((1-event.available/event.total)*100);
+  const isFree = event.price===0;
+  const isSoldOut = event.available===0;
+  const dietColors = {veg:'#16A34A',nonveg:'#DC2626',vegan:'#15803D',jain:'#D97706'};
+
+  return (
+    <div className="screen">
+      {/* Hero */}
+      <div style={{background:event.grad,minHeight:210,position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <button onClick={onBack} style={{position:'absolute',top:52,left:16,background:'rgba(0,0,0,0.4)',border:'none',borderRadius:'50%',width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'white'}}>
+          <Ico.Back />
+        </button>
+        <span style={{fontSize:70}}>{event.emoji}</span>
+        <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'50px 20px 18px',background:'linear-gradient(transparent,rgba(0,0,0,0.7))'}}>
+          <div style={{color:'white',fontSize:20,fontWeight:800,lineHeight:1.25,marginBottom:5}}>{title}</div>
+          <div style={{color:'rgba(255,255,255,0.8)',fontSize:13}}>{event.artist}</div>
+        </div>
+      </div>
+
+      <div style={{background:'white',padding:'18px'}}>
+        {/* Key info */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:18}}>
+          {[
+            {l:'Date',v:new Date(event.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})},
+            {l:'Time',v:event.time},
+            {l:'Duration',v:event.duration},
+          ].map(({l,v})=>(
+            <div key={l} style={{background:'#FDF8F0',borderRadius:12,padding:'11px',textAlign:'center'}}>
+              <div style={{fontSize:10,color:'#999',marginBottom:3}}>{l}</div>
+              <div style={{fontSize:13,fontWeight:700}}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Venue */}
+        <div style={{background:'#FDF8F0',borderRadius:14,padding:'14px',marginBottom:14}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+            <div>
+              <div style={{fontSize:15,fontWeight:700}}>{event.venue}</div>
+              <div style={{color:'#888',fontSize:12,display:'flex',alignItems:'center',gap:3,marginTop:2}}>
+                <Ico.Location />{event.zone}, Chennai
+              </div>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:22,fontWeight:800,color:isFree?'#22C55E':'#7B1818'}}>{isFree?'FREE':`₹${event.price}`}</div>
+              <div style={{fontSize:10,color:'#aaa'}}>per person</div>
+            </div>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#888',marginBottom:5}}>
+            <span>{event.available} seats left</span><span>{pct}% filled</span>
+          </div>
+          <div className="progress-bar"><div className="progress-fill" style={{width:`${pct}%`}}/></div>
+        </div>
+
+        {/* Description */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:6}}>About</div>
+          <div style={{fontSize:13,color:'#555',lineHeight:1.65}}>{event.desc}</div>
+        </div>
+
+        {/* Tags */}
+        <div style={{display:'flex',flexWrap:'wrap',gap:7,marginBottom:18}}>
+          {event.tags.map(tag=>(
+            <span key={tag} style={{background:'#F5F0EB',color:'#7B1818',padding:'3px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>#{tag}</span>
+          ))}
+        </div>
+
+        {/* Food canteens */}
+        {canteens.length>0&&(
+          <div style={{marginBottom:22}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,fontSize:14,fontWeight:700,marginBottom:12}}>
+              <Ico.Food /> {t('foodAt')}
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {canteens.map((c,i)=>(
+                <div key={i} style={{border:'1px solid #F0EBE0',borderRadius:12,padding:'12px 14px'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                    <div style={{fontWeight:700,fontSize:13}}>{c.name}</div>
+                    <div style={{fontSize:11,color:'#888'}}>{c.cuisine}</div>
+                  </div>
+                  <div style={{fontSize:12,color:'#666',marginBottom:7}}>{c.note}</div>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {c.dietary.map(d=>(
+                      <span key={d} style={{padding:'2px 9px',borderRadius:10,fontSize:11,fontWeight:600,border:`1.5px solid ${dietColors[d]}`,color:dietColors[d]}}>
+                        {d==='veg'?'🟢 Veg':d==='nonveg'?'🔴 Non-Veg':d==='vegan'?'🌱 Vegan':'🟡 Jain'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CTA */}
+        {isSoldOut?(
+          <div style={{textAlign:'center',padding:'14px',background:'#FEE2E2',borderRadius:14,color:'#DC2626',fontWeight:600}}>Sold Out</div>
+        ):(
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            <button className="btn-primary" onClick={()=>onBook(event,'solo')}>
+              👤 {t('soloBook')} – {isFree?'Free':`₹${event.price}`}
+            </button>
+            <button className="btn-secondary" onClick={()=>onBook(event,'group')}>
+              <span style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}><Ico.Group/> {t('groupBook')}</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── BOOKING FLOW ──────────────────────────────────────────────
+function BookingFlow({event,type,onBack,onConfirm}){
+  const {t,lang,showToast} = useContext(Ctx);
+  const [step,setStep] = useState(1);
+  const [count,setCount] = useState(type==='group'?2:1);
+  const [members,setMembers] = useState(['']);
+  const [payMethod,setPayMethod] = useState('upi');
+  const title = lang==='ta'?event.titleTa:event.title;
+  const total = event.price*count;
+
+  const changeCount = n => {
+    const nc = Math.max(1,Math.min(event.available,n));
+    setCount(nc);
+    setMembers(Array.from({length:Math.max(0,nc-1)},(_,i)=>members[i]||''));
+  };
+
+  const proceed = () => {
+    if(type==='group'&&count>1&&members.some(m=>!m.trim())){showToast("Enter all member names");return;}
+    setStep(2);
+  };
+
+  const pay = () => onConfirm({
+    event,type,count,members:['You',...members.slice(0,count-1)],payMethod,total,
+    bookingId:'MRZ'+Math.random().toString(36).substr(2,6).toUpperCase(),
+    bookedAt:new Date().toISOString(),
+  });
+
+  return (
+    <div className="screen" style={{background:'white',minHeight:'100vh'}}>
+      <div className="gradient-maroon" style={{padding:'48px 18px 18px'}}>
+        <button onClick={onBack} style={{background:'rgba(255,255,255,0.2)',border:'none',borderRadius:10,padding:'7px 14px',color:'white',cursor:'pointer',marginBottom:14,display:'flex',alignItems:'center',gap:8,fontSize:13}}>
+          <Ico.Back /> Back
+        </button>
+        <div style={{color:'#C9A227',fontSize:13,marginBottom:4}}>{type==='group'?'👥 Group Booking':'👤 Solo Booking'}</div>
+        <div style={{color:'white',fontSize:19,fontWeight:700,lineHeight:1.3}}>{title}</div>
+        <div style={{color:'rgba(255,255,255,0.65)',fontSize:12,marginTop:4}}>{event.venue} · {event.zone}</div>
+      </div>
+
+      <div style={{padding:'18px'}}>
+        {step===1?(
+          <>
+            {/* Ticket count */}
+            <div style={{background:'#FDF8F0',borderRadius:14,padding:'16px',marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:600,marginBottom:12}}>Number of Tickets</div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <button onClick={()=>changeCount(count-1)} style={{width:40,height:40,borderRadius:'50%',border:'2px solid #7B1818',background:'white',color:'#7B1818',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <Ico.Minus />
+                </button>
+                <div style={{textAlign:'center'}}>
+                  <div style={{fontSize:38,fontWeight:800,color:'#7B1818'}}>{count}</div>
+                  <div style={{fontSize:12,color:'#aaa'}}>{count===1?'ticket':'tickets'}</div>
+                </div>
+                <button onClick={()=>changeCount(count+1)} style={{width:40,height:40,borderRadius:'50%',border:'none',background:'#7B1818',color:'white',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <Ico.Plus />
+                </button>
+              </div>
+            </div>
+
+            {type==='group'&&count>1&&(
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>{t('addMembers')}</div>
+                {members.map((m,i)=>(
+                  <input key={i} className="input" style={{marginBottom:8}}
+                    placeholder={`Member ${i+2} name`} value={m}
+                    onChange={e=>{const nm=[...members];nm[i]=e.target.value;setMembers(nm);}}/>
+                ))}
+              </div>
+            )}
+
+            {/* Price summary */}
+            <div style={{border:'1px solid #eee',borderRadius:14,padding:'14px',marginBottom:18}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:7,fontSize:13}}>
+                <span>₹{event.price} × {count} ticket{count>1?'s':''}</span><span>₹{total}</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:7,fontSize:13,color:'#22C55E'}}>
+                <span>Convenience fee</span><span>₹0</span>
+              </div>
+              <div style={{borderTop:'1px solid #eee',paddingTop:8,display:'flex',justifyContent:'space-between',fontWeight:700,fontSize:16}}>
+                <span>Total</span>
+                <span style={{color:'#7B1818'}}>{total===0?'FREE':`₹${total}`}</span>
+              </div>
+            </div>
+
+            <button className="btn-primary" onClick={proceed}>
+              {t('proceedPay')} {total>0?`→ ₹${total}`:'→ Free'}
+            </button>
+          </>
+        ):(
+          <>
+            <div style={{fontSize:15,fontWeight:700,marginBottom:14}}>Choose Payment Method</div>
+
+            {[
+              {id:'upi',icon:'📱',label:'UPI / BHIM',sub:'GPay, PhonePe, Paytm, BHIM'},
+              {id:'card',icon:'💳',label:'Credit / Debit Card',sub:'Visa, Mastercard, RuPay'},
+              {id:'netbanking',icon:'🏦',label:'Net Banking',sub:'All major Indian banks'},
+            ].map(p=>(
+              <div key={p.id} onClick={()=>setPayMethod(p.id)} style={{
+                border:`2px solid ${payMethod===p.id?'#7B1818':'#eee'}`,
+                background:payMethod===p.id?'#FDF0F0':'white',
+                borderRadius:14,padding:'13px 16px',marginBottom:12,cursor:'pointer',
+                display:'flex',alignItems:'center',gap:14
+              }}>
+                <span style={{fontSize:28}}>{p.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:600,fontSize:13}}>{p.label}</div>
+                  <div style={{fontSize:12,color:'#999'}}>{p.sub}</div>
+                </div>
+                {payMethod===p.id&&<div style={{width:20,height:20,borderRadius:'50%',background:'#7B1818',display:'flex',alignItems:'center',justifyContent:'center'}}><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>}
+              </div>
+            ))}
+
+            <div style={{background:'#F0FDF4',borderRadius:12,padding:'11px 14px',marginBottom:18,display:'flex',gap:10,alignItems:'center'}}>
+              <span>🔒</span>
+              <div style={{fontSize:12,color:'#166534'}}>Secured by PCI-DSS compliant gateway. Card data never stored on Margazhi servers.</div>
+            </div>
+
+            <button className="btn-primary" onClick={pay}>
+              {total===0?'✓ Confirm Free Booking':`Pay ₹${total} Securely`}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── CONFIRMATION ──────────────────────────────────────────────
+function BookingConfirmation({booking,onDone}){
+  const {t,lang,showToast} = useContext(Ctx);
+  const title = lang==='ta'?booking.event.titleTa:booking.event.title;
+
+  return (
+    <div className="screen" style={{background:'#F0FDF4',minHeight:'100vh'}}>
+      <div style={{padding:'60px 22px 22px',textAlign:'center'}}>
+        <div className="success-circle" style={{marginBottom:18}}>
+          <Ico.Check />
+        </div>
+        <div style={{fontSize:21,fontWeight:800,color:'#166534',marginBottom:6}}>{t('confirmed')}</div>
+        <div style={{color:'#666',fontSize:13,marginBottom:28}}>Your tickets are confirmed</div>
+
+        <div style={{background:'white',borderRadius:20,padding:'18px',textAlign:'left',boxShadow:'0 4px 20px rgba(0,0,0,0.08)',marginBottom:20}}>
+          <div style={{borderBottom:'1px dashed #eee',paddingBottom:14,marginBottom:14}}>
+            <div style={{fontSize:10,color:'#aaa',letterSpacing:1,marginBottom:4}}>BOOKING ID</div>
+            <div style={{fontSize:20,fontWeight:800,letterSpacing:2,color:'#7B1818'}}>{booking.bookingId}</div>
+          </div>
+          <div style={{fontSize:15,fontWeight:700,marginBottom:4}}>{title}</div>
+          <div style={{color:'#777',fontSize:12,marginBottom:12}}>{booking.event.artist}</div>
+          {[
+            {l:'Venue',v:`${booking.event.venue}, ${booking.event.zone}`},
+            {l:'Date',v:new Date(booking.event.date).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'long'})},
+            {l:'Time',v:booking.event.time},
+            {l:'Tickets',v:`${booking.count} person${booking.count>1?'s':''}${booking.total===0?' (Free)':` · ₹${booking.total}`}`},
+          ].map(({l,v})=>(
+            <div key={l} style={{display:'flex',justifyContent:'space-between',marginBottom:7,fontSize:12}}>
+              <span style={{color:'#aaa'}}>{l}</span>
+              <span style={{fontWeight:600,textAlign:'right',maxWidth:'55%'}}>{v}</span>
+            </div>
+          ))}
+          {booking.members.length>1&&(
+            <div style={{marginTop:12,borderTop:'1px solid #f5f5f5',paddingTop:12}}>
+              <div style={{fontSize:11,color:'#aaa',marginBottom:7}}>Group Members</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {booking.members.map((m,i)=>(
+                  <span key={i} style={{background:'#FDF0F0',color:'#7B1818',padding:'3px 10px',borderRadius:10,fontSize:12,fontWeight:600}}>{m}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button className="btn-gold" style={{marginBottom:10}} onClick={()=>showToast("Opening WhatsApp… 📲")}>
+          <span style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            <Ico.Share/> {t('shareDetails')}
+          </span>
+        </button>
+        <button className="btn-secondary" onClick={onDone}>{t('viewBookings')}</button>
+      </div>
+    </div>
+  );
+}
+
+// ── MY BOOKINGS ───────────────────────────────────────────────
+function MyBookings({bookings,onEventClick}){
+  const {t,lang} = useContext(Ctx);
+  const [tab,setTab] = useState('upcoming');
+  const now = new Date();
+  const upcoming = bookings.filter(b=>new Date(b.event.date)>=now);
+  const past = bookings.filter(b=>new Date(b.event.date)<now);
+  const shown = tab==='upcoming'?upcoming:past;
+
+  return (
+    <div className="screen">
+      <div className="gradient-maroon" style={{padding:'48px 18px 18px'}}>
+        <div style={{color:'#C9A227',fontSize:24,fontWeight:800}}>{t('myBookings')}</div>
+        <div style={{color:'rgba(255,255,255,0.65)',fontSize:12}}>{bookings.length} booking{bookings.length!==1?'s':''} total</div>
+      </div>
+
+      <div style={{background:'white',display:'flex',borderBottom:'1px solid #eee'}}>
+        {['upcoming','past'].map(tabId=>(
+          <button key={tabId} onClick={()=>setTab(tabId)} style={{
+            flex:1,padding:'13px',border:'none',cursor:'pointer',background:'none',fontSize:14,fontWeight:600,
+            color:tab===tabId?'#7B1818':'#aaa',
+            borderBottom:tab===tabId?'2px solid #7B1818':'2px solid transparent',
+          }}>
+            {t(tabId)} ({tabId==='upcoming'?upcoming.length:past.length})
+          </button>
+        ))}
+      </div>
+
+      <div style={{padding:'14px'}}>
+        {shown.length===0?(
+          <div style={{textAlign:'center',padding:'60px 20px',color:'#aaa'}}>
+            <div style={{fontSize:48,marginBottom:12}}>{tab==='upcoming'?'📅':'📋'}</div>
+            <div style={{fontSize:15,fontWeight:600,marginBottom:6}}>
+              {tab==='upcoming'?'No upcoming bookings':'No past bookings'}
+            </div>
+            <div style={{fontSize:13}}>Book an event to see it here</div>
+          </div>
+        ):(
+          shown.map(b=>{
+            const title = lang==='ta'?b.event.titleTa:b.event.title;
+            return (
+              <div key={b.bookingId} style={{background:'white',borderRadius:16,padding:'14px',marginBottom:12,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:7}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:14,fontWeight:700,marginBottom:3}}>{title}</div>
+                    <div style={{fontSize:12,color:'#888'}}>{b.event.artist}</div>
+                  </div>
+                  <span style={{fontSize:26,marginLeft:10}}>{b.event.emoji}</span>
+                </div>
+                <div style={{display:'flex',gap:10,fontSize:11,color:'#aaa',marginBottom:9}}>
+                  <span>📅 {new Date(b.event.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>
+                  <span>🕐 {b.event.time}</span>
+                  <span>📍 {b.event.zone}</span>
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:9,borderTop:'1px solid #f5f5f5'}}>
+                  <div>
+                    <div style={{fontSize:10,color:'#bbb'}}>Booking ID</div>
+                    <div style={{fontSize:12,fontWeight:700,color:'#7B1818',letterSpacing:1}}>{b.bookingId}</div>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontSize:10,color:'#bbb'}}>{b.count} ticket{b.count>1?'s':''}</div>
+                    <div style={{fontSize:13,fontWeight:700,color:b.total===0?'#22C55E':'#1a1a1a'}}>{b.total===0?'Free':`₹${b.total}`}</div>
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:8,marginTop:9}}>
+                  <button style={{flex:1,padding:'8px',background:'#FDF8F0',border:'1px solid #E8D5C0',borderRadius:10,color:'#7B1818',fontSize:12,fontWeight:600,cursor:'pointer'}}
+                    onClick={()=>onEventClick(b.event)}>View Event</button>
+                  <button style={{flex:1,padding:'8px',background:'white',border:'1px solid #eee',borderRadius:10,color:'#888',fontSize:12,cursor:'pointer'}}>
+                    Share 📤
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────
+function NotificationsScreen(){
+  const {lang} = useContext(Ctx);
+  const notifs = [
+    {id:1,icon:'🎵',title:'New Carnatic Concert Added',body:'Bombay Jayashri at Music Academy – 3 days away',time:'2h ago',unread:true},
+    {id:2,icon:'⚡',title:'Almost Sold Out!',body:'Violin Trio Evening has only 30 seats remaining',time:'5h ago',unread:true},
+    {id:3,icon:'🎓',title:'Workshop Reminder',body:'Carnatic Music Workshop tomorrow at 10 AM',time:'1d ago',unread:false},
+    {id:4,icon:'🎭',title:'New Event Near You',body:'Kuchipudi Dance Drama – Anna Nagar this weekend',time:'2d ago',unread:false},
+    {id:5,icon:'🎶',title:'Folk Music Night',body:'Tamil Folk Music Night tickets now available',time:'3d ago',unread:false},
+  ];
+  return (
+    <div className="screen">
+      <div className="gradient-maroon" style={{padding:'48px 18px 18px'}}>
+        <div style={{color:'#C9A227',fontSize:24,fontWeight:800}}>
+          {lang==='ta'?'அறிவிப்புகள்':'Notifications'}
+        </div>
+      </div>
+      <div style={{padding:'14px'}}>
+        {notifs.map(n=>(
+          <div key={n.id} style={{
+            background:n.unread?'white':'#FAFAFA',borderRadius:14,padding:'14px',marginBottom:10,
+            borderLeft:`3px solid ${n.unread?'#7B1818':'transparent'}`,
+            boxShadow:n.unread?'0 2px 8px rgba(0,0,0,0.07)':'none',
+          }}>
+            <div style={{display:'flex',gap:12,alignItems:'flex-start'}}>
+              <span style={{fontSize:26}}>{n.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:n.unread?700:500,marginBottom:3}}>{n.title}</div>
+                <div style={{fontSize:12,color:'#777',marginBottom:3,lineHeight:1.45}}>{n.body}</div>
+                <div style={{fontSize:11,color:'#bbb'}}>{n.time}</div>
+              </div>
+              {n.unread&&<div style={{width:8,height:8,borderRadius:'50%',background:'#7B1818',marginTop:4,flexShrink:0}}/>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── PROFILE ───────────────────────────────────────────────────
+function Profile(){
+  const {t,lang,setLang,prefs,setPrefs,showToast} = useContext(Ctx);
+  const toggleI = id => setPrefs(p=>({...p,interests:p.interests.includes(id)?p.interests.filter(i=>i!==id):[...p.interests,id]}));
+
+  return (
+    <div className="screen">
+      <div className="gradient-maroon" style={{padding:'48px 18px 22px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <div style={{width:58,height:58,borderRadius:'50%',background:'#C9A227',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26}}>👤</div>
+          <div>
+            <div style={{color:'white',fontSize:17,fontWeight:700}}>Chennai Event Fan</div>
+            <div style={{color:'rgba(255,255,255,0.65)',fontSize:12}}>📍 {prefs.zone||'Chennai'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{padding:'14px'}}>
+        {/* Language */}
+        <div style={{background:'white',borderRadius:16,padding:'15px',marginBottom:11}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:11}}>🌐 {t('language')}</div>
+          <div style={{display:'flex',gap:10}}>
+            {[['en','English'],['ta','தமிழ்']].map(([code,label])=>(
+              <button key={code} onClick={()=>{setLang(code);showToast(code==='ta'?'மொழி மாற்றப்பட்டது':'Language: English');}}
+                style={{flex:1,padding:'9px',border:`2px solid ${lang===code?'#7B1818':'#eee'}`,borderRadius:12,
+                  background:lang===code?'#FDF0F0':'white',color:lang===code?'#7B1818':'#888',fontWeight:600,cursor:'pointer',fontSize:13}}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Zone */}
+        <div style={{background:'white',borderRadius:16,padding:'15px',marginBottom:11}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:11}}>📍 {t('zone')}</div>
+          <div className="scroll-x">
+            {ZONES.map(z=>(
+              <div key={z} className={`chip ${prefs.zone===z?'on':'off'}`}
+                onClick={()=>{setPrefs(p=>({...p,zone:z}));showToast(`Zone: ${z}`);}}>
+                {z}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Interests */}
+        <div style={{background:'white',borderRadius:16,padding:'15px',marginBottom:11}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:11}}>⭐ {t('interests')}</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
+            {INTERESTS.map(i=>(
+              <div key={i.id} className={`chip ${prefs.interests.includes(i.id)?'on':'off'}`} onClick={()=>toggleI(i.id)}>
+                {i.emoji} {lang==='ta'?i.ta:i.label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notifications toggle */}
+        <div style={{background:'white',borderRadius:16,padding:'15px',marginBottom:11}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:700}}>🔔 {t('notifsPref')}</div>
+              <div style={{fontSize:11,color:'#aaa',marginTop:2}}>Get alerts for events you'll love</div>
+            </div>
+            <div onClick={()=>{setPrefs(p=>({...p,notifs:!p.notifs}));showToast(prefs.notifs?'Notifications off':'Notifications on');}}
+              style={{width:46,height:25,borderRadius:13,background:prefs.notifs?'#7B1818':'#ddd',position:'relative',cursor:'pointer',transition:'background 0.2s'}}>
+              <div style={{width:21,height:21,borderRadius:'50%',background:'white',position:'absolute',top:2,left:prefs.notifs?23:2,transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.25)'}}/>
+            </div>
+          </div>
+        </div>
+
+        {/* App info */}
+        <div style={{background:'white',borderRadius:16,padding:'18px',textAlign:'center'}}>
+          <div style={{fontSize:28,marginBottom:5}}>🎵</div>
+          <div style={{fontSize:15,fontWeight:700,color:'#7B1818'}}>Margazhi v1.0</div>
+          <div style={{fontSize:11,color:'#aaa',marginTop:3}}>Chennai's Premier Event Discovery Platform</div>
+          <div style={{fontSize:10,color:'#ccc',marginTop:8}}>✓ PCI-DSS Compliant · ✓ Data Residency IN · ✓ PDPB Compliant</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── BOTTOM NAV ────────────────────────────────────────────────
+function BottomNav({current,onChange,badgeCount}){
+  const {t} = useContext(Ctx);
+  const tabs = [
+    {id:'home',label:t('home'),I:Ico.Home},
+    {id:'bookings',label:t('bookings'),I:Ico.Ticket},
+    {id:'notifications',label:t('notifications'),I:Ico.Bell},
+    {id:'profile',label:t('profile'),I:Ico.Person},
+  ];
+  return (
+    <div className="bottom-nav">
+      <div style={{display:'flex',justifyContent:'space-around'}}>
+        {tabs.map(({id,label,I})=>(
+          <button key={id} onClick={()=>onChange(id)} style={{
+            display:'flex',flexDirection:'column',alignItems:'center',gap:2,padding:'4px 10px',
+            background:'none',border:'none',cursor:'pointer',color:current===id?'#7B1818':'#9CA3AF',
+          }}>
+            <div style={{position:'relative'}}>
+              <I />
+              {id==='bookings'&&badgeCount>0&&(
+                <div style={{position:'absolute',top:-4,right:-6,background:'#7B1818',color:'white',borderRadius:'50%',width:15,height:15,fontSize:9,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>
+                  {badgeCount}
+                </div>
+              )}
+            </div>
+            <span style={{fontSize:10,fontWeight:current===id?700:400}}>{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────
+function MainApp(){
+  const {bookings,addBooking} = useContext(Ctx);
+  const [navTab,setNavTab] = useState('home');
+  const [screen,setScreen] = useState('home');
+  const [selectedEvent,setSelectedEvent] = useState(null);
+  const [bookType,setBookType] = useState(null);
+  const [confirmedBooking,setConfirmedBooking] = useState(null);
+
+  const goEvent = ev => { setSelectedEvent(ev); setScreen('detail'); };
+  const goBook = (ev,type) => { setSelectedEvent(ev); setBookType(type); setScreen('booking'); };
+  const goConfirm = booking => { addBooking(booking); setConfirmedBooking(booking); setScreen('confirmation'); };
+
+  const goNav = tab => { setNavTab(tab); setScreen(tab); setSelectedEvent(null); };
+
+  const showNav = !['booking','confirmation'].includes(screen);
+
+  let content;
+  if(screen==='detail'&&selectedEvent) content=<EventDetail event={selectedEvent} onBack={()=>setScreen(navTab)} onBook={goBook}/>;
+  else if(screen==='booking'&&selectedEvent) content=<BookingFlow event={selectedEvent} type={bookType} onBack={()=>setScreen('detail')} onConfirm={goConfirm}/>;
+  else if(screen==='confirmation'&&confirmedBooking) content=<BookingConfirmation booking={confirmedBooking} onDone={()=>goNav('bookings')}/>;
+  else if(navTab==='bookings') content=<MyBookings bookings={bookings} onEventClick={goEvent}/>;
+  else if(navTab==='notifications') content=<NotificationsScreen/>;
+  else if(navTab==='profile') content=<Profile/>;
+  else content=<HomeScreen onEventClick={goEvent}/>;
+
+  return (
+    <div className="app">
+      {content}
+      {showNav&&<BottomNav current={navTab} onChange={goNav} badgeCount={bookings.length}/>}
+    </div>
+  );
+}
+
+// ── ROOT ──────────────────────────────────────────────────────
+function App(){
+  const {onboarded} = useContext(Ctx);
+  return onboarded?<MainApp/>:<Onboarding/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <AppProvider><App/></AppProvider>
+);
+</script>
+</body>
+</html>
